@@ -1,2 +1,12 @@
 *.xcconfig
 *.key
+*.th
+*.pyc
+*.yml
+*.jsonl
+*.key
+*.log
+*.json
+*.txt
+*.png
+*.h

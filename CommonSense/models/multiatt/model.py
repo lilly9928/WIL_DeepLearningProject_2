@@ -160,7 +160,7 @@ class AttentionQA(Model):
 
         ####################################
         # Perform Q by A attention
-        # [batch_size, 4, question_length, answer_length]
+        # [batch_size, 4, question_length, answer_length]v
         qa_similarity = self.span_attention(
             q_rep.view(q_rep.shape[0] * q_rep.shape[1], q_rep.shape[2], q_rep.shape[3]),
             a_rep.view(a_rep.shape[0] * a_rep.shape[1], a_rep.shape[2], a_rep.shape[3]),

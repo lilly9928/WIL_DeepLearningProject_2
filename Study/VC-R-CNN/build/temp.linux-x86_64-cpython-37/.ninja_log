@@ -1,0 +1,6 @@
+# ninja log v5
+3	22635	1706778598128586270	/home/user2/code/WIL_DeepLearningProject_2/Study/VC-R-CNN/build/temp.linux-x86_64-cpython-37/home/user2/code/WIL_DeepLearningProject_2/Study/VC-R-CNN/vc_rcnn/csrc/cuda/deform_pool_kernel_cuda.o	99493ff03b2ef8ee
+2	23930	1706778599424585297	/home/user2/code/WIL_DeepLearningProject_2/Study/VC-R-CNN/build/temp.linux-x86_64-cpython-37/home/user2/code/WIL_DeepLearningProject_2/Study/VC-R-CNN/vc_rcnn/csrc/cuda/deform_conv_kernel_cuda.o	e980f0f917dcc543
+0	34950	1706778610428576904	/home/user2/code/WIL_DeepLearningProject_2/Study/VC-R-CNN/build/temp.linux-x86_64-cpython-37/home/user2/code/WIL_DeepLearningProject_2/Study/VC-R-CNN/vc_rcnn/csrc/cpu/ROIAlign_cpu.o	6fb1cb99d733be9d
+1	36585	1706778612056575643	/home/user2/code/WIL_DeepLearningProject_2/Study/VC-R-CNN/build/temp.linux-x86_64-cpython-37/home/user2/code/WIL_DeepLearningProject_2/Study/VC-R-CNN/vc_rcnn/csrc/cpu/nms_cpu.o	23127c029f8c8c34
+3	38707	1706778614172573997	/home/user2/code/WIL_DeepLearningProject_2/Study/VC-R-CNN/build/temp.linux-x86_64-cpython-37/home/user2/code/WIL_DeepLearningProject_2/Study/VC-R-CNN/vc_rcnn/csrc/vision.o	a93b6de9d4b0a281
