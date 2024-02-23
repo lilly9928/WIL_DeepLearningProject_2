@@ -25,6 +25,10 @@ import h5py
 from copy import deepcopy
 from config import VCR_IMAGES_DIR, VCR_ANNOTS_DIR,VCR_DATALOADER_DIR
 
+from models.multiatt.entity_extractor import RefinedEntityExtractor
+from models.multiatt.entity_verbalization import RebelEntityVerbalizer
+
+
 GENDER_NEUTRAL_NAMES = ['Casey', 'Riley', 'Jessie', 'Jackie', 'Avery', 'Jaime', 'Peyton', 'Kerry', 'Jody', 'Kendall',
                         'Peyton', 'Skyler', 'Frankie', 'Pat', 'Quinn']
 
@@ -117,7 +121,9 @@ def _fix_tokenization(tokenized_sent, bert_embs, old_det_to_new_ind, obj_to_type
                            bert_embs,
                            padding_value=0)
     tags = SequenceLabelField([x[1] for x in new_tokenization_with_tags], text_field)
-    return text_field, tags
+
+    orginal_sent = ' '.join([x[0] for x in new_tokenization_with_tags])
+    return text_field, tags ,orginal_sent
 
 
 class VCR(Dataset):
@@ -143,6 +149,7 @@ class VCR(Dataset):
 
         self.add_image_as_a_box = add_image_as_a_box
         self.conditioned_answer_choice = conditioned_answer_choice
+
 
         with open(os.path.join(VCR_ANNOTS_DIR, '{}.jsonl'.format(split)), 'r') as f:
             self.items = [json.loads(s) for s in f]
@@ -263,7 +270,7 @@ class VCR(Dataset):
 
         instance_dict = {}
         if 'endingonly' not in self.embs_to_load:
-            questions_tokenized, question_tags = zip(*[_fix_tokenization(
+            questions_tokenized, question_tags, questions = zip(*[_fix_tokenization(
                 item['question'],
                 grp_items[f'ctx_{self.mode}{condition_key}{i}'],
                 old_det_to_new_ind,
@@ -271,10 +278,12 @@ class VCR(Dataset):
                 token_indexers=self.token_indexers,
                 pad_ind=0 if self.add_image_as_a_box else -1
             ) for i in range(4)])
+
             instance_dict['question'] = ListField(questions_tokenized)
             instance_dict['question_tags'] = ListField(question_tags)
 
-        answers_tokenized, answer_tags = zip(*[_fix_tokenization(
+
+        answers_tokenized, answer_tags, answers = zip(*[_fix_tokenization(
             answer,
             grp_items[f'answer_{self.mode}{condition_key}{i}'],
             old_det_to_new_ind,
@@ -285,11 +294,19 @@ class VCR(Dataset):
 
         instance_dict['answers'] = ListField(answers_tokenized)
         instance_dict['answer_tags'] = ListField(answer_tags)
+
+
+        # instance_dict['question_sents'] = ArrayField(questions)
+        # instance_dict['answer_sents'] = ArrayField(answers)
+
         if self.split != 'test':
             instance_dict['label'] = LabelField(item['{}_label'.format(self.mode)], skip_indexing=True)
         instance_dict['metadata'] = MetadataField({'annot_id': item['annot_id'], 'ind': index, 'movie': item['movie'],
                                                    'img_fn': item['img_fn'],
-                                                   'question_number': item['question_number']})
+                                                   'question_number': item['question_number'],
+                                                   'question_sents':questions,
+                                                   'answer_sents': answers,
+                                                   })
 
         ###################################################################
         # Load image now and rescale it. Might have to subtract the mean and whatnot here too.
@@ -341,6 +358,8 @@ def collate_fn(data, to_gpu=False):
     images, instances = zip(*data)
     images = torch.stack(images, 0)
     batch = Batch(instances)
+
+
     td = batch.as_tensor_dict()
     if 'question' in td:
         td['question_mask'] = get_text_field_mask(td['question'], num_wrapping_dims=1)
@@ -351,6 +370,7 @@ def collate_fn(data, to_gpu=False):
 
     td['box_mask'] = torch.all(td['boxes'] >= 0, -1).long()
     td['images'] = images
+
 
     # Deprecated
     # if to_gpu:

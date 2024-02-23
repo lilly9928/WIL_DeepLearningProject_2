@@ -5,7 +5,7 @@ try:
 except:
     from transformers import get_constant_schedule, get_constant_schedule_with_warmup,  get_linear_schedule_with_warmup
 
-from modeling.modeling_qagnn import *
+from modeling.modeling_qagnn_gqa import *
 from utils.optimization_utils import OPTIMIZER_CLASSES
 from utils.parser_utils import *
 
@@ -52,9 +52,9 @@ def main():
 
     # data
     parser.add_argument('--num_relation', default=38, type=int, help='number of relations')
-    parser.add_argument('--train_adj', default=f'/data2/KJE/{args.dataset}/graph/sample.graph.adj.pk')
-    parser.add_argument('--dev_adj', default=f'/data2/KJE/{args.dataset}/graph/sample.graph.adj.pk')
-    parser.add_argument('--test_adj', default=f'/data2/KJE/{args.dataset}/graph/sample.graph.adj.pk')
+    parser.add_argument('--train_adj', default=f'/data2/KJE/{args.dataset}/graph/train_balanced_questions.graph.adj.pk')
+    parser.add_argument('--dev_adj', default=f'/data2/KJE/{args.dataset}/graph/testdev_balanced_questions.graph.adj.pk')
+    parser.add_argument('--test_adj', default=f'/data2/KJE/{args.dataset}/graph/testdev_balanced_questions.graph.adj.pk')
     parser.add_argument('--use_cache', default=True, type=bool_flag, nargs='?', const=True, help='use cached data to accelerate data loading')
 
     # model architecture

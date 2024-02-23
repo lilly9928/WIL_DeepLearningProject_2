@@ -35,11 +35,11 @@ DATASET_SETTING = {
 DATASET_NO_TEST = ['socialiqa']
 
 EMB_PATHS = {
-    'transe': 'data/transe/glove.transe.sgd.ent.npy',
-    'lm': 'data/transe/glove.transe.sgd.ent.npy',
-    'numberbatch': 'data/transe/concept.nb.npy',
-    'tzw': 'data/cpnet/tzw.ent.npy',
-    'ddb': 'data/ddb/ent_emb.npy',
+    'transe': '/data2/KJE/RSG/data/transe/glove.transe.sgd.ent.npy',
+    'lm': '/data2/KJE/RSG/data/transe/glove.transe.sgd.ent.npy',
+    'numberbatch': '/data2/KJE/RSG/data/transe/concept.nb.npy',
+    'tzw': '/data2/KJE/RSG/data/cpnet/tzw.ent.npy',
+    'ddb': '/data2/KJE/RSG/data/ddb/ent_emb.npy',
 }
 
 
@@ -49,11 +49,11 @@ def add_data_arguments(parser):
     # dataset specific
     parser.add_argument('-ds', '--dataset', default='csqa', choices=DATASET_LIST, help='dataset name')
     parser.add_argument('-ih', '--inhouse', type=bool_flag, nargs='?', const=True, help='run in-house setting')
-    parser.add_argument('--inhouse_train_qids', default='data/{dataset}/inhouse_split_qids.txt', help='qids of the in-house training set')
+    parser.add_argument('--inhouse_train_qids', default='/data2/KJE/RSG/data/{dataset}/inhouse_split_qids.txt', help='qids of the in-house training set')
     # statements
-    parser.add_argument('--train_statements', default='data/{dataset}/statement/train.statement.jsonl')
-    parser.add_argument('--dev_statements', default='data/{dataset}/statement/dev.statement.jsonl')
-    parser.add_argument('--test_statements', default='data/{dataset}/statement/test.statement.jsonl')
+    parser.add_argument('--train_statements', default='/data2/KJE/RSG/data/{dataset}/statement/train.statement.jsonl')
+    parser.add_argument('--dev_statements', default='/data2/KJE/RSG/data/{dataset}/statement/dev.statement.jsonl')
+    parser.add_argument('--test_statements', default='/data2/KJE/RSG/data/{dataset}/statement/test.statement.jsonl')
     # preprocessing options
     parser.add_argument('-sl', '--max_seq_len', default=100, type=int)
     # set dataset defaults

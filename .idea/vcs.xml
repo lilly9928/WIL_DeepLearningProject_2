@@ -3,14 +3,9 @@
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/CommonSense/base/LLaVA" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/Study/GPT4RoI" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/Study/Graph/RelTR" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/RSG/base/RelTR" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/Study/Graph/czsl" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/Study/Graph/qagnn" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/Study/LLaVA" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/Study/apex" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/Study/cocoapi" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/Study/gpt-neox-main/apex" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/Study/llama" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/VisualProgramming/base/viper" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/VisualProgramming/base/visprog" vcs="Git" />

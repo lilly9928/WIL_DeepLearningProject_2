@@ -1,10 +1,24 @@
 import argparse
-
-from utils import utils
+from utils.utils import *
+from modeling.modeling_encoder import MODEL_NAME_TO_CLASS
 
 ENCODER_DEFAULT_LR = {
     'default': 1e-3,
     'csqa': {
+        'lstm': 3e-4,
+        'openai-gpt': 1e-4,
+        'bert-base-uncased': 3e-5,
+        'bert-large-uncased': 2e-5,
+        'roberta-large': 1e-5,
+    },
+    'VCR': {
+        'lstm': 3e-4,
+        'openai-gpt': 1e-4,
+        'bert-base-uncased': 3e-5,
+        'bert-large-uncased': 2e-5,
+        'roberta-large': 1e-5,
+    },
+     'GQA': {
         'lstm': 3e-4,
         'openai-gpt': 1e-4,
         'bert-base-uncased': 3e-5,
@@ -23,21 +37,25 @@ ENCODER_DEFAULT_LR = {
     },
 }
 
-DATASET_LIST = ['csqa', 'obqa', 'medqa_usmle']
+DATASET_LIST = ['csqa', 'obqa', 'socialiqa', 'medqa_usmle','VCR','GQA']
 
 DATASET_SETTING = {
+    'GQA': 'official',
+    'VCR': 'official',
     'csqa': 'inhouse',
     'obqa': 'official',
+    'socialiqa': 'official',
     'medqa_usmle': 'official',
 }
 
-DATASET_NO_TEST = []
+DATASET_NO_TEST = ['socialiqa']
 
 EMB_PATHS = {
-    'transe': 'data/cpnet/glove.transe.sgd.ent.npy',
-    'numberbatch': 'data/cpnet/concept.nb.npy',
-    'tzw': 'data/cpnet/tzw.ent.npy',
-    'ddb': 'data/ddb/ent_emb.npy',
+    'transe': '/data2/KJE/RSG/data/transe/glove.transe.sgd.ent.npy',
+    'lm': '/data2/KJE/RSG/data/transe/glove.transe.sgd.ent.npy',
+    'numberbatch': '/data2/KJE/RSG/data/transe/concept.nb.npy',
+    'tzw': '/data2/KJE/RSG/data/cpnet/tzw.ent.npy',
+    'ddb': '/data2/KJE/RSG/data/ddb/ent_emb.npy',
 }
 
 
@@ -45,16 +63,16 @@ def add_data_arguments(parser):
     # arguments that all datasets share
     parser.add_argument('--ent_emb', default=['tzw'], nargs='+', help='sources for entity embeddings')
     # dataset specific
-    parser.add_argument('-ds', '--dataset', default='csqa', choices=DATASET_LIST, help='dataset name')
+    parser.add_argument('-ds', '--dataset', default='VCR', choices=DATASET_LIST, help='dataset name')
     parser.add_argument('--data_dir', default='data', type=str, help='Path to the data directory')
-    parser.add_argument('-ih', '--inhouse', type=utils.bool_flag, nargs='?', const=True, help='run in-house setting')
-    parser.add_argument('--inhouse_train_qids', default='data/{dataset}/inhouse_split_qids.txt', help='qids of the in-house training set')
+    parser.add_argument('-ih', '--inhouse', type=bool_flag, nargs='?', const=True, help='run in-house setting')
+    parser.add_argument('--inhouse_train_qids', default='/data2/KJE/RSG/data/{dataset}/inhouse_split_qids.txt', help='qids of the in-house training set')
     # statements
-    parser.add_argument('--train_statements', default='{data_dir}/{dataset}/statement/train.statement.jsonl')
-    parser.add_argument('--dev_statements', default='{data_dir}/{dataset}/statement/dev.statement.jsonl')
-    parser.add_argument('--test_statements', default='{data_dir}/{dataset}/statement/test.statement.jsonl')
+    parser.add_argument('--train_statements', default='/data2/KJE/{dataset}/statement/dev.statement.jsonl')
+    parser.add_argument('--dev_statements', default='/data2/KJE/{dataset}/statement/train0_1.statement.jsonl')
+    parser.add_argument('--test_statements', default='/data2/KJE/{dataset}/statement/train1_1.statement.jsonl')
     # preprocessing options
-    parser.add_argument('-sl', '--max_seq_len', default=100, type=int)
+    parser.add_argument('-sl', '--max_seq_len', default=200, type=int)
     # set dataset defaults
     args, _ = parser.parse_known_args()
     parser.set_defaults(ent_emb_paths=[EMB_PATHS.get(s) for s in args.ent_emb],
@@ -64,13 +82,13 @@ def add_data_arguments(parser):
     for split in data_splits:
         for attribute in ('statements',):
             attr_name = f'{split}_{attribute}'
-            parser.set_defaults(**{attr_name: getattr(args, attr_name).format(dataset=args.dataset, data_dir=args.data_dir)})
+            parser.set_defaults(**{attr_name: getattr(args, attr_name).format(dataset=args.dataset)})
     if 'test' not in data_splits:
         parser.set_defaults(test_statements=None)
 
 
 def add_encoder_arguments(parser):
-    parser.add_argument('-enc', '--encoder', default='bert-large-uncased', help='encoder type')
+    parser.add_argument('-enc', '--encoder', default='google-bert/bert-base-multilingual-uncased', help='encoder type')
     parser.add_argument('--encoder_layer', default=-1, type=int, help='encoder layer ID to use as features (used only by non-LSTM encoders)')
     parser.add_argument('-elr', '--encoder_lr', default=2e-5, type=float, help='learning rate')
     args, _ = parser.parse_known_args()
@@ -91,9 +109,9 @@ def add_optimization_arguments(parser):
 
 def add_additional_arguments(parser):
     parser.add_argument('--log_interval', default=10, type=int)
-    parser.add_argument('--cuda', default=True, type=utils.bool_flag, nargs='?', const=True, help='use GPU')
+    parser.add_argument('--cuda', default=True, type=bool_flag, nargs='?', const=True, help='use GPU')
     parser.add_argument('--seed', default=0, type=int, help='random seed')
-    parser.add_argument('--debug', default=False, type=utils.bool_flag, nargs='?', const=True, help='run in debug mode')
+    parser.add_argument('--debug', default=False, type=bool_flag, nargs='?', const=True, help='run in debug mode')
     args, _ = parser.parse_known_args()
     if args.debug:
         parser.set_defaults(batch_size=1, log_interval=1, eval_interval=5)
@@ -107,3 +125,19 @@ def get_parser():
     add_optimization_arguments(parser)
     add_additional_arguments(parser)
     return parser
+
+
+def get_lstm_config_from_args(args):
+    lstm_config = {
+        'hidden_size': args.encoder_dim,
+        'output_size': args.encoder_dim,
+        'num_layers': args.encoder_layer_num,
+        'bidirectional': args.encoder_bidir,
+        'emb_p': args.encoder_dropoute,
+        'input_p': args.encoder_dropouti,
+        'hidden_p': args.encoder_dropouth,
+        'pretrained_emb_or_path': args.encoder_pretrained_emb,
+        'freeze_emb': args.encoder_freeze_emb,
+        'pool_function': args.encoder_pooler,
+    }
+    return lstm_config

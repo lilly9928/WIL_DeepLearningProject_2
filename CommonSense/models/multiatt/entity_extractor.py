@@ -14,7 +14,7 @@ class RefinedEntityExtractor:
 	[['Lady Susan', Entity(wikidata_entity_id=Q581180, wikipedia_entity_title=Lady Susan), None]]
 	"""
 
-	def __init__(self, device=-1):
+	def __init__(self, device=0):
 
 		# set extractor as ReFInED extractor
 		self.extractor = Refined.from_pretrained(model_name="wikipedia_model_with_numbers", entity_set="wikipedia", device=device)
@@ -32,8 +32,7 @@ class RefinedEntityExtractor:
 
 		# in case the question given does not split '?' at the end from the last token,
 		# doing this double check to make sure ReFInEd found the entity if that entity stands at the end of the question
-		if text.endswith('?') and not text.endswith(' ?'):
-			text = text[:-1]+' '+'?'
+
 
 		# preprocessing: extract entity linking into different spans
 		spans = self.extractor.process_text(text)

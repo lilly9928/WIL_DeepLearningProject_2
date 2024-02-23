@@ -43,7 +43,7 @@ import CommonSense.base.r2c.models
 #################################
 #################################
 
-os.environ["CUDA_VISIBLE_DEVICES"]='0,1,2'
+os.environ["CUDA_VISIBLE_DEVICES"]='3,4'
 
 parser = argparse.ArgumentParser(description='train')
 parser.add_argument(

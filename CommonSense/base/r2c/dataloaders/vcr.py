@@ -122,7 +122,7 @@ class VCR(Dataset):
         with open(os.path.join(VCR_ANNOTS_DIR, '{}.jsonl'.format(split)), 'r') as f:
             self.items = [json.loads(s) for s in f]
 
-        if split not in ('test', 'train', 'val'):
+        if split not in ('test', 'train_1', 'val'):
             raise ValueError("Mode must be in test, train, or val. Supplied {}".format(mode))
 
         if mode not in ('answer', 'rationale'):
@@ -142,7 +142,7 @@ class VCR(Dataset):
 
     @property
     def is_train(self):
-        return self.split == 'train'
+        return self.split == 'train_1'
 
     @classmethod
     def splits(cls, **kwargs):
@@ -150,7 +150,7 @@ class VCR(Dataset):
         kwargs_copy = {x: y for x, y in kwargs.items()}
         if 'mode' not in kwargs:
             kwargs_copy['mode'] = 'answer'
-        train = cls(split='train', **kwargs_copy)
+        train = cls(split='train_1', **kwargs_copy)
         val = cls(split='val', **kwargs_copy)
         test = cls(split='test', **kwargs_copy)
         return train, val, test

@@ -16,6 +16,9 @@ from utils.detector import SimpleDetector
 from allennlp.nn.util import masked_softmax, weighted_sum, replace_masked_values
 from allennlp.nn import InitializerApplicator
 
+from models.multiatt.entity_extractor import RefinedEntityExtractor
+from models.multiatt.entity_verbalization import RebelEntityVerbalizer
+
 @Model.register("MultiHopAttentionQA")
 class AttentionQA(Model):
     def __init__(self,
@@ -42,6 +45,9 @@ class AttentionQA(Model):
 
         self.span_encoder = TimeDistributed(span_encoder)
         self.reasoning_encoder = TimeDistributed(reasoning_encoder)
+        self.extractor = RefinedEntityExtractor()
+        self.verbalizer=RebelEntityVerbalizer()
+
 
         self.span_attention = BilinearMatrixAttention(
             matrix_1_dim=span_encoder.get_output_dim(),
@@ -153,6 +159,14 @@ class AttentionQA(Model):
                 ))
 
         obj_reps = self.detector(images=images, boxes=boxes, box_mask=box_mask, classes=objects, segms=segms)
+
+        # entity_set = self.extractor(metadata['question_sent'][0])
+        #
+        # # entity verbalization
+        # knowledge_triples = []
+        # for entity, entity_title in entity_set:
+        #     knowledge_triples.extend(self.verbalizer(entity, entity_title))
+
 
         # Now get the question representations
         q_rep, q_obj_reps = self.embed_span(question, question_tags, question_mask, obj_reps['obj_reps'])

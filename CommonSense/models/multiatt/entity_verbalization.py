@@ -12,7 +12,7 @@ from transformers import pipeline
 
 class RebelEntityVerbalizer:
 
-	def __init__(self, device=-1):
+	def __init__(self, device=0):
 
 		# set extractor as REBEL extractor
 		self.extractor = pipeline('text2text-generation', model='Babelscape/rebel-large', tokenizer='Babelscape/rebel-large', device=device)

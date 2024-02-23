@@ -4,6 +4,7 @@ from utils.layers import *
 import torch.nn.functional as F
 
 
+
 class QAGNN_Message_Passing(nn.Module):
     def __init__(self, args, k, n_ntype, n_etype, input_size, hidden_size, output_size,
                     dropout=0.1):
@@ -60,6 +61,7 @@ class QAGNN_Message_Passing(nn.Module):
         node_score: tensor of shape (batch_size, n_node, 1)
         """
         _batch_size, _n_nodes = node_type.size()
+
 
         #Embed type
         T = make_one_hot(node_type.view(-1).contiguous(), self.n_ntype).view(_batch_size, _n_nodes, self.n_ntype)
@@ -154,7 +156,7 @@ class QAGNN(nn.Module):
         gnn_input1 = self.concept_emb(concept_ids[:, 1:]-1, emb_data) #(batch_size, n_node-1, dim_node)
         gnn_input1 = gnn_input1.to(node_type_ids.device)
         gnn_input = self.dropout_e(torch.cat([gnn_input0, gnn_input1], dim=1)) #(batch_size, n_node, dim_node)
-
+        #임베딩 cat
 
         #Normalize node sore (use norm from Z)
         _mask = (torch.arange(node_scores.size(1), device=node_scores.device) < adj_lengths.unsqueeze(1)).float() #0 means masked out #[batch_size, n_node]

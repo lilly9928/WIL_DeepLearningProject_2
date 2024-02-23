@@ -75,7 +75,7 @@ class MultiGPUSparseAdjDataBatchGenerator(object):
         else:
             return obj.to(device)
 
-#TODO : 데이터시각화
+
 def load_sparse_adj_data_with_contextnode(adj_pk_path, max_node_num, num_choice, args):
     cache_path = adj_pk_path +'.loaded_cache'
     use_cache = True
@@ -287,6 +287,8 @@ def get_gpt_token_num():
 
 
 def load_bert_xlnet_roberta_input_tensors(statement_jsonl_path, model_type, model_name, max_seq_length):
+
+    ## output : self.train_qids, self.train_labels, *self.train_encoder_data
     class InputExample(object):
 
         def __init__(self, example_id, question, caption,contexts, endings, label=None):
@@ -317,7 +319,7 @@ def load_bert_xlnet_roberta_input_tensors(statement_jsonl_path, model_type, mode
             examples = []
             for line in f.readlines():
                 json_dic = json.loads(line)
-                label = ord(json_dic["answerKey"]) - ord("A") if 'answerKey' in json_dic else 0
+                # label = ord(json_dic["answerKey"]) - ord("A") if 'answerKey' in json_dic else 0
                 contexts = json_dic["question"]["stem"]
                 imgcontexts = json_dic["image_caption"]
                 if "para" in json_dic:
@@ -333,7 +335,7 @@ def load_bert_xlnet_roberta_input_tensors(statement_jsonl_path, model_type, mode
                             question="",
                             caption = [imgcontexts] * len(json_dic["question"]["choices"]),
                             endings=[ending["text"] for ending in json_dic["question"]["choices"]],
-                            label=label
+                            label=json_dic["question"]["choices"]["label"]
                         ))
                 else:
                     examples.append(
@@ -342,8 +344,8 @@ def load_bert_xlnet_roberta_input_tensors(statement_jsonl_path, model_type, mode
                             contexts=[contexts],
                             question="",
                             caption=[imgcontexts],
-                            endings=[json_dic["question"]["choices"]["text"]],
-                            label=label
+                            endings="",
+                            label=json_dic["question"]["choices"]["label"]
                         ))
         return examples
 
@@ -367,18 +369,16 @@ def load_bert_xlnet_roberta_input_tensors(statement_jsonl_path, model_type, mode
                 - True (XLNet/GPT pattern): A + [SEP] + B + [SEP] + [CLS]
             `cls_token_segment_id` define the segment id associated to the CLS token (0 for BERT, 2 for XLNet)
         """
-        label_map = {label: i for i, label in enumerate(label_list)}
 
         features = []
         for ex_index, example in enumerate(tqdm(examples)):
             choices_features = []
-            for ending_idx, (context, ending,caption) in enumerate(zip(example.contexts, example.endings, example.caption)):
+            for ending_idx, (context,caption) in enumerate(zip(example.contexts, example.caption)):
                 tokens_a = tokenizer.tokenize(context)
-                tokens_b = tokenizer.tokenize(example.question + " " + ending)
                 tokens_c = tokenizer.tokenize(caption)
 
                 special_tokens_count = 4 if sep_token_extra else 3
-                _truncate_seq_pair(tokens_a, tokens_b, tokens_c,max_seq_length - special_tokens_count)
+                _truncate_seq_pair(tokens_a, tokens_c,max_seq_length - special_tokens_count)
 
                 # The convention in BERT is:
                 # (a) For sequence pairs:
@@ -405,10 +405,6 @@ def load_bert_xlnet_roberta_input_tensors(statement_jsonl_path, model_type, mode
                     tokens += [sep_token]
 
                 segment_ids = [sequence_a_segment_id] * len(tokens)
-
-                if tokens_b:
-                    tokens += tokens_b + [sep_token]
-                    segment_ids += [sequence_b_segment_id] * (len(tokens_b) + 1)
 
                 if tokens_c:
                     tokens += tokens_c + [sep_token]
@@ -449,12 +445,12 @@ def load_bert_xlnet_roberta_input_tensors(statement_jsonl_path, model_type, mode
                 assert len(input_mask) == max_seq_length
                 assert len(segment_ids) == max_seq_length
                 choices_features.append((tokens, input_ids, input_mask, segment_ids, output_mask))
-            label = label_map[example.label]
+            label =  tokenizer.convert_tokens_to_ids(tokenizer.tokenize(example.label))
             features.append(InputFeatures(example_id=example.example_id, choices_features=choices_features, label=label))
 
         return features
 
-    def _truncate_seq_pair(tokens_a, tokens_b, tokens_c,max_length):
+    def _truncate_seq_pair(tokens_a, tokens_c,max_length):
         """Truncates a sequence pair in place to the maximum length."""
 
         # This is a simple heuristic which will always truncate the longer sequence
@@ -462,13 +458,9 @@ def load_bert_xlnet_roberta_input_tensors(statement_jsonl_path, model_type, mode
         # of tokens from each, since if one sequence is very short then each token
         # that's truncated likely contains more information than a longer sequence.
         while True:
-            total_length = len(tokens_a) + len(tokens_b)+len(tokens_c)
+            total_length = len(tokens_a) +len(tokens_c)
             if total_length <= max_length:
                 break
-            if len(tokens_a) > len(tokens_b):
-                tokens_a.pop()
-            else:
-                tokens_b.pop()
 
     def select_field(features, field):
         return [[choice[field] for choice in feature.choices_features] for feature in features]
@@ -478,13 +470,15 @@ def load_bert_xlnet_roberta_input_tensors(statement_jsonl_path, model_type, mode
         all_input_mask = torch.tensor(select_field(features, 'input_mask'), dtype=torch.long)
         all_segment_ids = torch.tensor(select_field(features, 'segment_ids'), dtype=torch.long)
         all_output_mask = torch.tensor(select_field(features, 'output_mask'), dtype=torch.bool)
-        all_label = torch.tensor([f.label for f in features], dtype=torch.long)
+        all_label = torch.tensor([f.label[0] for f in features], dtype=torch.long)
         return all_input_ids, all_input_mask, all_segment_ids, all_output_mask, all_label
 
     # try:
     #     tokenizer_class = {'bert': BertTokenizer, 'xlnet': XLNetTokenizer, 'roberta': RobertaTokenizer, 'albert': AlbertTokenizer}.get(model_type)
     # except:
     #     tokenizer_class = {'bert': BertTokenizer, 'xlnet': XLNetTokenizer, 'roberta': RobertaTokenizer}.get(model_type)
+
+    ##code 시작
     tokenizer_class = AutoTokenizer
     tokenizer = tokenizer_class.from_pretrained(model_name)
     examples = read_examples(statement_jsonl_path)

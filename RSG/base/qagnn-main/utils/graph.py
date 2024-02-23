@@ -319,7 +319,9 @@ def concepts_to_adj_matrices_2hop_all_pair__use_LM__Part1(data):
     for qid in qa_nodes:
         for aid in qa_nodes:
             if qid != aid and qid in cpnet_simple.nodes and aid in cpnet_simple.nodes:
+                #extra_nodes에 q와 관련있는 노드 , a와 관련 있는 노드를 기존의 extra node에 있는 노드의 중복을 제거하고 넣기
                 extra_nodes |= set(cpnet_simple[qid]) & set(cpnet_simple[aid])
+    # extra_nodes에서 qa 노드 제거
     extra_nodes = extra_nodes - qa_nodes
     return (sorted(qc_ids), sorted(ac_ids), question, sorted(extra_nodes))
 

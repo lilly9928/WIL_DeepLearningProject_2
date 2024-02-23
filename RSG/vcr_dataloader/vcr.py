@@ -2,9 +2,6 @@
 Dataloaders for VCR
 """
 
-import sys
-sys.path.append("/home/user2/code/WIL_DeepLearningProject_2/CommonSense")
-
 import json
 import os
 
@@ -18,15 +15,13 @@ from allennlp.data.tokenizers import Token
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.nn.util import get_text_field_mask
 from torch.utils.data import Dataset
-from dataloaders.vcr.box_utils import load_image, resize_image, to_tensor_and_normalize
-from dataloaders.vcr.mask_utils import make_mask
-from dataloaders.vcr.bert_field import BertField
+from vcr_dataloader.box_utils import load_image, resize_image, to_tensor_and_normalize
+from vcr_dataloader.mask_utils import make_mask
+from vcr_dataloader.bert_field import BertField
 import h5py
 from copy import deepcopy
-from config import VCR_IMAGES_DIR, VCR_ANNOTS_DIR,VCR_DATALOADER_DIR
+from vcr_dataloader.config import VCR_IMAGES_DIR, VCR_ANNOTS_DIR,VCR_DATALOADER_DIR
 
-from models.multiatt.entity_extractor import RefinedEntityExtractor
-from models.multiatt.entity_verbalization import RebelEntityVerbalizer
 
 
 GENDER_NEUTRAL_NAMES = ['Casey', 'Riley', 'Jessie', 'Jackie', 'Avery', 'Jaime', 'Peyton', 'Kerry', 'Jody', 'Kendall',

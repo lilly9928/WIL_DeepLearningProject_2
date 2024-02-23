@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export CUDA_VISIBLE_DEVICES=0,1
+export CUDA_VISIBLE_DEVICES=3,4,5
 dt=`date '+%Y%m%d_%H%M%S'`
 
 
@@ -40,12 +40,12 @@ for seed in 0; do
       --encoder $model -k $k --gnn_dim $gnndim -elr $elr -dlr $dlr -bs $bs -mbs $mbs --fp16 true --seed $seed \
       --num_relation $num_relation \
       --n_epochs $n_epochs --max_epochs_before_stop 10  \
-      --train_adj data/${dataset}/graph/train.graph.adj.pk \
-      --dev_adj   data/${dataset}/graph/dev.graph.adj.pk \
-      --test_adj  data/${dataset}/graph/test.graph.adj.pk \
-      --train_statements  data/${dataset}/statement/train.statement.jsonl \
-      --dev_statements  data/${dataset}/statement/dev.statement.jsonl \
-      --test_statements  data/${dataset}/statement/test.statement.jsonl \
+      --train_adj /data2/KJE/RSG/data/${dataset}/graph/train.graph.adj.pk \
+      --dev_adj   /data2/KJE/RSG/data/${dataset}/graph/dev.graph.adj.pk \
+      --test_adj  /data2/KJE/RSG/data/${dataset}/graph/test.graph.adj.pk \
+      --train_statements  /data2/KJE/RSG/data/${dataset}/statement/train.statement.jsonl \
+      --dev_statements  /data2/KJE/RSG/data/${dataset}/statement/dev.statement.jsonl \
+      --test_statements  /data2/KJE/RSG/data/${dataset}/statement/test.statement.jsonl \
       --save_model \
       --save_dir ${save_dir_pref}/${dataset}/enc-${model}__k${k}__gnndim${gnndim}__bs${bs}__seed${seed}__${dt} $args \
   > logs/train_${dataset}__enc-${model}__k${k}__gnndim${gnndim}__bs${bs}__seed${seed}__${dt}.log.txt
