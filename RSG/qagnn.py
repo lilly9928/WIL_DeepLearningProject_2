@@ -10,7 +10,6 @@ from utils.optimization_utils import OPTIMIZER_CLASSES
 from utils.parser_utils import *
 
 
-
 DECODER_DEFAULT_LR = {
     'csqa': 1e-3,
     'VCR': 1e-3,
@@ -23,7 +22,7 @@ from collections import defaultdict, OrderedDict
 import numpy as np
 
 import socket, os, subprocess, datetime
-os.environ["CUDA_VISIBLE_DEVICES"]= '4'
+
 print(socket.gethostname())
 print ("pid:", os.getpid())
 print ("conda env:", os.environ['CONDA_DEFAULT_ENV'])
@@ -53,9 +52,9 @@ def main():
 
     # data
     parser.add_argument('--num_relation', default=38, type=int, help='number of relations')
-    parser.add_argument('--train_adj', default=f'/data2/KJE/{args.dataset}/graph/dev.graph.adj.pk')
-    parser.add_argument('--dev_adj', default=f'/data2/KJE/{args.dataset}/graph/train0_1.graph.adj.pk')
-    parser.add_argument('--test_adj', default=f'/data2/KJE/{args.dataset}/graph/train1_1.graph.adj.pk')
+    parser.add_argument('--train_adj', default=f'/data2/KJE/{args.dataset}/graph/sample.graph.adj.pk')
+    parser.add_argument('--dev_adj', default=f'/data2/KJE/{args.dataset}/graph/sample.graph.adj.pk')
+    parser.add_argument('--test_adj', default=f'/data2/KJE/{args.dataset}/graph/sample.graph.adj.pk')
     parser.add_argument('--use_cache', default=True, type=bool_flag, nargs='?', const=True, help='use cached data to accelerate data loading')
 
     # model architecture
@@ -170,6 +169,7 @@ def train(args):
             model.load_state_dict(model_state_dict)
 
         model.encoder.to(device0)
+        model.img_encoder.to(device0)
         model.decoder.to(device1)
 
 
@@ -254,7 +254,7 @@ def train(args):
 
 
 
-            ##!!!!!!!!!학습
+            ##!!!!!!!!!
             for qids, labels, *input_data in dataset.train():
                 optimizer.zero_grad()
                 bs = labels.size(0)

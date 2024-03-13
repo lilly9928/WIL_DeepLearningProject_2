@@ -68,9 +68,9 @@ def add_data_arguments(parser):
     parser.add_argument('-ih', '--inhouse', type=bool_flag, nargs='?', const=True, help='run in-house setting')
     parser.add_argument('--inhouse_train_qids', default='/data2/KJE/RSG/data/{dataset}/inhouse_split_qids.txt', help='qids of the in-house training set')
     # statements
-    parser.add_argument('--train_statements', default='/data2/KJE/{dataset}/statement/dev.statement.jsonl')
-    parser.add_argument('--dev_statements', default='/data2/KJE/{dataset}/statement/train0_1.statement.jsonl')
-    parser.add_argument('--test_statements', default='/data2/KJE/{dataset}/statement/train1_1.statement.jsonl')
+    parser.add_argument('--train_statements', default='/data2/KJE/{dataset}/statement/sample.statement.jsonl')
+    parser.add_argument('--dev_statements', default='/data2/KJE/{dataset}/statement/sample.statement.jsonl')
+    parser.add_argument('--test_statements', default='/data2/KJE/{dataset}/statement/sample.statement.jsonl')
     # preprocessing options
     parser.add_argument('-sl', '--max_seq_len', default=200, type=int)
     # set dataset defaults
@@ -97,13 +97,13 @@ def add_encoder_arguments(parser):
 
 def add_optimization_arguments(parser):
     parser.add_argument('--loss', default='cross_entropy', choices=['margin_rank', 'cross_entropy'], help='model type')
-    parser.add_argument('--optim', default='radam', choices=['sgd', 'adam', 'adamw', 'radam'], help='learning rate scheduler')
-    parser.add_argument('--lr_schedule', default='fixed', choices=['fixed', 'warmup_linear', 'warmup_constant'], help='learning rate scheduler')
-    parser.add_argument('-bs', '--batch_size', default=32, type=int)
+    parser.add_argument('--optim', default='adam', choices=['sgd', 'adam', 'adamw', 'radam'], help='learning rate scheduler')
+    parser.add_argument('--lr_schedule', default='warmup_linear', choices=['fixed', 'warmup_linear', 'warmup_constant'], help='learning rate scheduler')
+    parser.add_argument('-bs', '--batch_size', default=256, type=int)
     parser.add_argument('--warmup_steps', type=float, default=150)
     parser.add_argument('--max_grad_norm', default=1.0, type=float, help='max grad norm (0 to disable)')
     parser.add_argument('--weight_decay', default=1e-2, type=float, help='l2 weight decay strength')
-    parser.add_argument('--n_epochs', default=100, type=int, help='total number of training epochs to perform.')
+    parser.add_argument('--n_epochs', default=20, type=int, help='total number of training epochs to perform.')
     parser.add_argument('-me', '--max_epochs_before_stop', default=10, type=int, help='stop training if dev does not increase for N epochs')
 
 

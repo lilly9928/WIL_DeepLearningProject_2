@@ -24,9 +24,7 @@ from dataloaders.vcr.bert_field import BertField
 import h5py
 from copy import deepcopy
 from config import VCR_IMAGES_DIR, VCR_ANNOTS_DIR,VCR_DATALOADER_DIR
-
-from models.multiatt.entity_extractor import RefinedEntityExtractor
-from models.multiatt.entity_verbalization import RebelEntityVerbalizer
+from transformers import BlipProcessor, BlipForConditionalGeneration
 
 
 GENDER_NEUTRAL_NAMES = ['Casey', 'Riley', 'Jessie', 'Jackie', 'Avery', 'Jaime', 'Peyton', 'Kerry', 'Jody', 'Kendall',
@@ -150,6 +148,9 @@ class VCR(Dataset):
         self.add_image_as_a_box = add_image_as_a_box
         self.conditioned_answer_choice = conditioned_answer_choice
 
+        self.processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-large")
+        self.model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-large").to("cuda")
+
 
         with open(os.path.join(VCR_ANNOTS_DIR, '{}.jsonl'.format(split)), 'r') as f:
             self.items = [json.loads(s) for s in f]
@@ -200,6 +201,21 @@ class VCR(Dataset):
         stuff_to_return = [cls(split='test', mode='answer', **kwargs)] + [
             cls(split='test', mode='rationale', conditioned_answer_choice=i, **kwargs) for i in range(4)]
         return tuple(stuff_to_return)
+
+    # 이미지를 크롭한 후 캡션을 생성하는 함수를 정의합니다.
+    def generate_captions(image_crop):
+        inputs = self.processor(image_crop, return_tensors="pt", padding=True)
+        inputs = {k: v.cuda() for k, v in inputs.items()}
+        with torch.no_grad():
+            captions = self.model.generate(**inputs)
+        captions = self.processor.decode(captions[0], skip_special_tokens=True)
+        return captions
+
+    # VCR 데이터셋에서 이미지를 처리하고 캡션을 생성하는 함수를 정의합니다.
+    def process_image_and_generate_caption(image_crop):
+        # 이미지를 처리하고 캡션을 생성합니다.
+        caption = generate_captions(image_crop)
+        return caption
 
     def __len__(self):
         return len(self.items)
@@ -338,6 +354,7 @@ class VCR(Dataset):
 
         instance_dict['segms'] = ArrayField(segms, padding_value=0)
         instance_dict['objects'] = ListField([LabelField(x, skip_indexing=True) for x in obj_labels])
+
 
         if not np.all((boxes[:, 0] >= 0.) & (boxes[:, 0] < boxes[:, 2])):
             import ipdb

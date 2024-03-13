@@ -4,18 +4,21 @@ from multiprocessing import cpu_count
 from utils.convert_csqa import convert_to_entailment
 from utils.convert_obqa import convert_to_obqa_statement
 from utils.conceptnet import extract_english, construct_graph
-from utils.grounding import create_matcher_patterns, ground
-from utils.graph import generate_adj_data_from_grounded_concepts__use_LM
+#from utils.grounding import create_matcher_patterns, ground
+# from utils.graph import generate_adj_data_from_grounded_concepts__use_LM
+from utils.graph_wo_image import generate_adj_data_from_grounded_concepts__use_LM
+from utils.grounding_wo_image import create_matcher_patterns, ground
 
 os.environ["CUDA_VISIBLE_DEVICES"]= '3'
 
 input_paths = {
        'vcr': {
         'train0': '/data2/KJE/VCR/statement/train0_1.statement.jsonl',
-        'train1': '/data2/KJE/VCR/statement/train1_1.statement.jsonl',
+        'train1': '/data2/KJE/VCR/statement/train_1.statement.jsonl',
         'train2': '/data2/KJE/VCR/statement/train2_1.statement.jsonl',
         'train3': '/data2/KJE/VCR/statement/train3_1.statement.jsonl',
         'train4': '/data2/KJE/VCR/statement/train4_1.statement.jsonl',
+
         'dev': '/data2/KJE/VCR/statement/val.statement.jsonl',
         'test': '/data2/KJE/VCR/statement/test.statement.jsonl',
         'sample': '/data2/KJE/VCR/statement/sample.statement.jsonl',
@@ -45,7 +48,7 @@ output_paths = {
      'vcr': {
         'statement': {
             'train0': '/data2/KJE/VCR/statement/train0_1.statement.jsonl',
-            'train1': '/data2/KJE/VCR/statement/train1_1.statement.jsonl',
+            'train1': '/data2/KJE/VCR/statement/train_1.statement.jsonl',
             'train2': '/data2/KJE/VCR/statement/train_2.statement.jsonl',
             'train3': '/data2/KJE/VCR/statement/train_3.statement.jsonl',
             'train4': '/data2/KJE/VCR/statement/train_4.statement.jsonl',
@@ -64,7 +67,7 @@ output_paths = {
         },
         'grounded': {
             'train0': '/data2/KJE/VCR/grounded/train0_1.grounded.jsonl',
-            'train1': '/data2/KJE/VCR/grounded/train1_1.grounded.jsonl',
+            'train1': '/data2/KJE/VCR/grounded/train_1.grounded.jsonl',
             'train2': '/data2/KJE/VCR/grounded/train2.grounded.jsonl',
             'train3': '/data2/KJE/VCR/grounded/train3.grounded.jsonl',
             'train4': '/data2/KJE/VCR/grounded/train4.grounded.jsonl',
@@ -81,8 +84,8 @@ output_paths = {
             
         },
         'graph': {
-            'adj-train0': '/data2/KJE/VCR/graph/train0_1.graph.adj.pk',
-            'adj-train1': '/data2/KJE/VCR/graph/train1_1.graph.adj.pk',
+            'adj-train0': '/data2/KJE/VCR/graph/woutimage/train0_1.graph.adj.pk',
+            'adj-train1': '/data2/KJE/VCR/graph/train_1.graph.adj.pk',
             'adj-train2': '/data2/KJE/VCR/graph/train2.graph.adj.pk',
             'adj-train3': '/data2/KJE/VCR/graph/train3.graph.adj.pk',
             'adj-train4': '/data2/KJE/VCR/graph/train4.graph.adj.pk',
@@ -118,10 +121,10 @@ def main():
     routines = {
             'vcr': [
 
-            {'func': ground, 'args': (output_paths['vcr']['statement']['train_all'], output_paths['cpnet']['vocab'],
-                                          output_paths['cpnet']['patterns'], output_paths['vcr']['grounded']['train_all'],
-                                          args.nprocs)},
-            {'func': generate_adj_data_from_grounded_concepts__use_LM, 'args': (output_paths['vcr']['grounded']['train_all'], output_paths['cpnet']['pruned-graph'], output_paths['cpnet']['vocab'], output_paths['vcr']['graph']['adj-train_all'], args.nprocs)},
+            # {'func': ground, 'args': (output_paths['vcr']['statement']['train0'], output_paths['cpnet']['vocab'],
+            #                               output_paths['cpnet']['patterns'], output_paths['vcr']['grounded']['train0'],
+            #                               args.nprocs)},
+            {'func': generate_adj_data_from_grounded_concepts__use_LM, 'args': (output_paths['vcr']['grounded']['train0'], output_paths['cpnet']['pruned-graph'], output_paths['cpnet']['vocab'], output_paths['vcr']['graph']['adj-train0'], args.nprocs)},
     
         ]
        

@@ -308,6 +308,7 @@ def prune(data, cpnet_vocab_path):
     return prune_data
 
 
+#TODO
 def ground(statement_path, cpnet_vocab_path, pattern_path, output_path, num_processes=1, debug=False):
     global PATTERN_PATH, CPNET_VOCAB
     if PATTERN_PATH is None:

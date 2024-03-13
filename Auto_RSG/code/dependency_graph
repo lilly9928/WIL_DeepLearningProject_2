@@ -1,0 +1,15 @@
+digraph {
+	What [label=What]
+	is -> What [label=nsubj]
+	is [label=is]
+	red [label=red]
+	is -> red [label=acomp]
+	in [label=in]
+	red -> in [label=prep]
+	this [label=this]
+	picture -> this [label=det]
+	picture [label=picture]
+	in -> picture [label=pobj]
+	"?" [label="?"]
+	is -> "?" [label=punct]
+}

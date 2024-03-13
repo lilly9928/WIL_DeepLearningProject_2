@@ -346,7 +346,6 @@ def concepts_to_adj_matrices_2hop_all_pair__use_LM__Part3(data):
     schema_graph = qc_ids + ac_ids + sorted(extra_nodes, key=lambda x: -cid2score[x]) #score: from high to low
     schema_graph_image = qc_ids + ac_ids + sorted(extra_nodes, key=lambda x: -icid2score[x])  # score: from high to low
 
-    #의미?
     arange = np.arange(len(schema_graph))
     arange_img = np.arange(len(schema_graph_image))
 
@@ -358,7 +357,9 @@ def concepts_to_adj_matrices_2hop_all_pair__use_LM__Part3(data):
 
 
     adj, concepts = concepts2adj(schema_graph)
-    return {'adj': adj, 'concepts': concepts, 'qmask': qmask, 'amask': amask, 'cid2score': cid2score,'i2qmask': i2qmask, 'i2amask': i2amask, 'icid2score': icid2score}
+    adj_image, concepts_image = concepts2adj(schema_graph_image)
+
+    return {'adj': adj, 'concepts': concepts,'adj_i': adj_image, 'concepts_i': concepts_image, 'qmask': qmask, 'amask': amask, 'cid2score': cid2score,'i2qmask': i2qmask, 'i2amask': i2amask, 'icid2score': icid2score}
 
 ################################################################################
 

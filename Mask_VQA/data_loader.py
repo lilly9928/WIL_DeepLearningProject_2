@@ -5,6 +5,7 @@ import torch.utils.data as data
 import torchvision.transforms as transforms
 from PIL import Image
 from util import text_helper
+from torchvision.transforms import functional
 
 
 class VqaDataset(data.Dataset):

@@ -10,8 +10,10 @@ except:
     pass
 from transformers import AutoModel, BertModel, BertConfig
 # from transformers.modeling_bert import BERT_PRETRAINED_MODEL_ARCHIVE_MAP
+from transformers import Pix2StructForConditionalGeneration, Pix2StructProcessor
 from utils.layers import *
 from utils.data_utils import get_gpt_token_num
+import torchvision.models as models
 
 MODEL_CLASS_TO_NAME = {
     'gpt': list(OPENAI_GPT_PRETRAINED_CONFIG_ARCHIVE_MAP.keys()),
@@ -19,6 +21,7 @@ MODEL_CLASS_TO_NAME = {
     'xlnet': list(XLNET_PRETRAINED_CONFIG_ARCHIVE_MAP.keys()),
     'roberta': list(ROBERTA_PRETRAINED_CONFIG_ARCHIVE_MAP.keys()),
     'lstm': ['lstm'],
+    'img_model':[]
 }
 try:
     MODEL_CLASS_TO_NAME['albert'] =  list(ALBERT_PRETRAINED_CONFIG_ARCHIVE_MAP.keys())
@@ -85,7 +88,6 @@ class LSTMTextEncoder(nn.Module):
             outputs = outputs + (all_hidden_states,)
         return outputs
 
-
 class TextEncoder(nn.Module):
     valid_model_types = set(MODEL_CLASS_TO_NAME.keys())
 
@@ -98,6 +100,7 @@ class TextEncoder(nn.Module):
         if self.model_type in ('lstm',):
             self.module = LSTMTextEncoder(**kwargs, output_hidden_states=True)
             self.sent_dim = self.module.output_size
+
         else:
             model_class = AutoModel
             self.module = model_class.from_pretrained(model_name, output_hidden_states=True)
@@ -143,6 +146,31 @@ class TextEncoder(nn.Module):
         return sent_vecs, all_hidden_states
 
 
+
+class ImgEncoder(nn.Module):
+
+    def __init__(self):
+        """(1) Load the pretrained model as you want.
+               cf) one needs to check structure of model using 'print(model)'
+                   to remove last fc layer from the model.
+           (2) Replace final fc layer (score values from the ImageNet)
+               with new fc layer (image feature).
+           (3) Normalize feature vector.
+        """
+        super(ImgEncoder, self).__init__()
+        self.model = models.resnet101(pretrained=True)
+        self.img_dim = self.model.fc.in_features
+        self.model.fc = nn.Identity()
+
+    def forward(self, image):
+        """Extract feature vector from image vector.
+        """
+        img_feature = self.model(image)                  # [batch_size, vgg16(19)_fc=4096]
+
+        l2_norm = img_feature.norm(p=2, dim=1, keepdim=True).detach()
+        img_feature = img_feature.div(l2_norm)               # l2-normalized feature vector
+
+        return img_feature
 def run_test():
     encoder = TextEncoder('lstm', vocab_size=100, emb_size=100, hidden_size=200, num_layers=4)
     input_ids = torch.randint(0, 100, (30, 70))

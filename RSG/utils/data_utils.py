@@ -3,6 +3,9 @@ import os
 import numpy as np
 import torch
 from transformers import (OpenAIGPTTokenizer, BertTokenizer, XLNetTokenizer, RobertaTokenizer, AutoTokenizer)
+from torchvision.transforms import functional
+
+
 try:
     from transformers import AlbertTokenizer
 except:
@@ -292,17 +295,18 @@ def get_gpt_token_num():
 def load_bert_xlnet_roberta_input_tensors(statement_jsonl_path, model_type, model_name, max_seq_length):
     class InputExample(object):
 
-        def __init__(self, example_id, question, caption,contexts, endings, label=None):
+        def __init__(self, example_id, question, caption,contexts, endings, image,label=None):
             self.example_id = example_id
             self.question = question
             self.caption = caption
             self.contexts = contexts
             self.endings = endings
             self.label = label
+            self.image = image
 
     class InputFeatures(object):
 
-        def __init__(self, example_id, choices_features, label):
+        def __init__(self, example_id, choices_features, label, image):
             self.example_id = example_id
             self.choices_features = [
                 {
@@ -314,6 +318,7 @@ def load_bert_xlnet_roberta_input_tensors(statement_jsonl_path, model_type, mode
                 for _, input_ids, input_mask, segment_ids, output_mask in choices_features
             ]
             self.label = label
+            self.image = image
 
     def read_examples(input_file):
         with open(input_file, "r", encoding="utf-8") as f:
@@ -323,8 +328,8 @@ def load_bert_xlnet_roberta_input_tensors(statement_jsonl_path, model_type, mode
                 label = ord(json_dic["answerKey"]) - ord("A") if 'answerKey' in json_dic else 0
                 contexts = json_dic["question"]["stem"]
                 imgcontexts = json_dic["image_caption"]
-
-
+                image = Image.open(json_dic["image_path"]).convert('RGB')
+                image = image.resize((224,224), Image.Resampling.LANCZOS)
 
 
                 if "para" in json_dic:
@@ -332,27 +337,17 @@ def load_bert_xlnet_roberta_input_tensors(statement_jsonl_path, model_type, mode
                 if "fact1" in json_dic:
                     contexts = json_dic["fact1"] + " " + contexts
 
-                if 2 < len(json_dic["question"]["choices"]):
-                    examples.append(
-                        InputExample(
-                            example_id=json_dic["id"],
-                            contexts=[contexts] * len(json_dic["question"]["choices"]),
-                            question="",
-                            caption = [imgcontexts] * len(json_dic["question"]["choices"]),
-                            endings=[ending["text"] for ending in json_dic["question"]["choices"]],
-                            label=label,
+                examples.append(
+                    InputExample(
+                        example_id=json_dic["id"],
+                        contexts=[contexts] * len(json_dic["question"]["choices"]),
+                        question="",
+                        caption = [imgcontexts] * len(json_dic["question"]["choices"]),
+                        endings=[ending["text"] for ending in json_dic["question"]["choices"]],
+                        label=label,
+                        image =image
 
-                        ))
-                else:
-                    examples.append(
-                        InputExample(
-                            example_id=json_dic["id"],
-                            contexts=[contexts],
-                            question="",
-                            caption=[imgcontexts],
-                            endings=[json_dic["question"]["choices"]["text"]],
-                            label=label,
-                        ))
+                    ))
         return examples
 
     def convert_examples_to_features(examples, label_list, max_seq_length,
@@ -458,7 +453,10 @@ def load_bert_xlnet_roberta_input_tensors(statement_jsonl_path, model_type, mode
                 assert len(segment_ids) == max_seq_length
                 choices_features.append((tokens, input_ids, input_mask, segment_ids, output_mask))
             label = label_map[example.label]
-            features.append(InputFeatures(example_id=example.example_id, choices_features=choices_features, label=label))
+
+            image = functional.normalize(functional.to_tensor(example.image), mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))
+
+            features.append(InputFeatures(example_id=example.example_id, choices_features=choices_features, label=label,image = image))
 
         return features
 
@@ -487,12 +485,17 @@ def load_bert_xlnet_roberta_input_tensors(statement_jsonl_path, model_type, mode
         all_segment_ids = torch.tensor(select_field(features, 'segment_ids'), dtype=torch.long)
         all_output_mask = torch.tensor(select_field(features, 'output_mask'), dtype=torch.bool)
         all_label = torch.tensor([f.label for f in features], dtype=torch.long)
-        return all_input_ids, all_input_mask, all_segment_ids, all_output_mask, all_label
+        all_image = torch.stack([f.image for f in features])
+
+        return all_input_ids, all_input_mask, all_segment_ids, all_output_mask, all_label,all_image
 
     # try:
     #     tokenizer_class = {'bert': BertTokenizer, 'xlnet': XLNetTokenizer, 'roberta': RobertaTokenizer, 'albert': AlbertTokenizer}.get(model_type)
     # except:
     #     tokenizer_class = {'bert': BertTokenizer, 'xlnet': XLNetTokenizer, 'roberta': RobertaTokenizer}.get(model_type)
+
+
+    ##start
     tokenizer_class = AutoTokenizer
     tokenizer = tokenizer_class.from_pretrained(model_name)
     examples = read_examples(statement_jsonl_path)
@@ -506,8 +509,8 @@ def load_bert_xlnet_roberta_input_tensors(statement_jsonl_path, model_type, mode
                                             pad_token_segment_id=4 if model_type in ['xlnet'] else 0,
                                             sequence_b_segment_id=0 if model_type in ['roberta', 'albert'] else 1)
     example_ids = [f.example_id for f in features]
-    *data_tensors, all_label = convert_features_to_tensors(features)
-    return (example_ids, all_label, *data_tensors)
+    *data_tensors, all_label,all_image = convert_features_to_tensors(features)
+    return (example_ids, all_label,all_image, *data_tensors)
 
 
 

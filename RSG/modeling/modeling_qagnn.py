@@ -1,4 +1,4 @@
-from modeling.modeling_encoder import TextEncoder, MODEL_NAME_TO_CLASS
+from modeling.modeling_encoder import TextEncoder,ImgEncoder, MODEL_NAME_TO_CLASS
 from utils.data_utils import *
 from utils.layers import *
 import torch.nn.functional as F
@@ -99,7 +99,7 @@ class QAGNN_Message_Passing(nn.Module):
 
 
 class QAGNN(nn.Module):
-    def __init__(self, args, k, n_ntype, n_etype, sent_dim,
+    def __init__(self, args, k, n_ntype, n_etype, sent_dim,img_dim,
                  n_concept, concept_dim, concept_in_dim, n_attention_head,
                  fc_dim, n_fc_layer, p_emb, p_gnn, p_fc,
                  pretrained_concept_emb=None, freeze_ent_emb=True,
@@ -111,8 +111,9 @@ class QAGNN(nn.Module):
                                                use_contextualized=False, concept_in_dim=concept_in_dim,
                                                pretrained_concept_emb=pretrained_concept_emb, freeze_ent_emb=freeze_ent_emb)
 
-        ## 임베딩을 이렇게 해야하는지..?
         self.svec2nvec = nn.Linear(sent_dim, concept_dim)
+
+        self.ivec2nvec = nn.Linear(img_dim, concept_dim)
 
         self.concept_dim = concept_dim
 
@@ -124,9 +125,12 @@ class QAGNN(nn.Module):
         self.pooler = MultiheadAttPoolLayer(n_attention_head, sent_dim, concept_dim)
 
         self.fc = MLP(concept_dim + sent_dim + concept_dim, fc_dim, 1, n_fc_layer, p_fc, layer_norm=True)
+        self.img_fc = MLP(img_dim, fc_dim, 1, n_fc_layer, p_fc, layer_norm=True)
 
         self.dropout_e = nn.Dropout(p_emb)
         self.dropout_fc = nn.Dropout(p_fc)
+        self.dropout_fc_img = nn.Dropout(p_fc)
+
 
         if init_range > 0:
             self.apply(self._init_weights)
@@ -142,7 +146,7 @@ class QAGNN(nn.Module):
             module.weight.data.fill_(1.0)
 
 
-    def forward(self, sent_vecs, concept_ids, node_type_ids, node_scores, adj_lengths, adj, emb_data=None, cache_output=False):
+    def forward(self, sent_vecs,img_vec, concept_ids, node_type_ids, node_scores, adj_lengths, adj, emb_data=None, cache_output=False):
         """
         sent_vecs: (batch_size, dim_sent)
         concept_ids: (batch_size, n_node)
@@ -156,8 +160,21 @@ class QAGNN(nn.Module):
         """
         gnn_input0 = self.activation(self.svec2nvec(sent_vecs)).unsqueeze(1) #(batch_size, 1, dim_node)
         gnn_input1 = self.concept_emb(concept_ids[:, 1:]-1, emb_data) #(batch_size, n_node-1, dim_node)
+        img_vec_check = img_vec
+        batch_size = gnn_input0.size(0)
+        img_vec = img_vec_check[:1]
+        img_vec = torch.stack([img_vec]*batch_size)
+        gnn_input2 = self.activation(self.ivec2nvec(img_vec)) # (batch_size, 1, dim_node)
+        gnn_input0_2 = gnn_input0+gnn_input2
         gnn_input1 = gnn_input1.to(node_type_ids.device)
-        gnn_input = self.dropout_e(torch.cat([gnn_input0, gnn_input1], dim=1)) #(batch_size, n_node, dim_node)
+        try:
+            gnn_input = self.dropout_e(torch.cat([gnn_input1, gnn_input0 ], dim=1)) #(batch_size, n_node, dim_node)
+        except:
+            batch_size = gnn_input0.size(0)
+            img_vec = img_vec_check[:1]
+            img_vec = torch.stack([img_vec] * batch_size)
+            gnn_input2 = self.activation(self.ivec2nvec(img_vec))  # (batch_size, 1, dim_node)
+            gnn_input = self.dropout_e(torch.cat([ gnn_input1, gnn_input0], dim=1))
 
         #Normalize node sore (use norm from Z)
         _mask = (torch.arange(node_scores.size(1), device=node_scores.device) < adj_lengths.unsqueeze(1)).float() #0 means masked out #[batch_size, n_node]
@@ -180,6 +197,8 @@ class QAGNN(nn.Module):
         mask[mask.all(1), 0] = 0  # a temporary solution to avoid zero node
 
         sent_vecs_for_pooler = sent_vecs
+
+
         graph_vecs, pool_attn = self.pooler(sent_vecs_for_pooler, gnn_output, mask)
 
         if cache_output:
@@ -187,8 +206,13 @@ class QAGNN(nn.Module):
             self.adj = adj
             self.pool_attn = pool_attn
 
+
         concat = self.dropout_fc(torch.cat((graph_vecs, sent_vecs, Z_vecs), 1))
         logits = self.fc(concat)
+        img_fc = self.img_fc(img_vec.squeeze())
+
+
+
         return logits, pool_attn
 
 
@@ -199,8 +223,9 @@ class LM_QAGNN(nn.Module):
                  pretrained_concept_emb=None, freeze_ent_emb=True,
                  init_range=0.0, encoder_config={}):
         super().__init__()
+        self.img_encoder = ImgEncoder()
         self.encoder = TextEncoder(model_name, **encoder_config)
-        self.decoder = QAGNN(args, k, n_ntype, n_etype, self.encoder.sent_dim,
+        self.decoder = QAGNN(args, k, n_ntype, n_etype, self.encoder.sent_dim, self.img_encoder.img_dim,
                                         n_concept, concept_dim, concept_in_dim, n_attention_head,
                                         fc_dim, n_fc_layer, p_emb, p_gnn, p_fc,
                                         pretrained_concept_emb=pretrained_concept_emb, freeze_ent_emb=freeze_ent_emb,
@@ -220,21 +245,27 @@ class LM_QAGNN(nn.Module):
                                                          -> (total E, )
         returns: (batch_size, 1)
         """
-        bs, nc = inputs[0].size(0), inputs[0].size(1)
+        image, *inputs = inputs
+        bs, nc = inputs[1].size(0), inputs[1].size(1)
 
         #Here, merge the batch dimension and the num_choice dimension
         edge_index_orig, edge_type_orig = inputs[-2:]
         _inputs = [x.view(x.size(0) * x.size(1), *x.size()[2:]) for x in inputs[:-6]] + [x.view(x.size(0) * x.size(1), *x.size()[2:]) for x in inputs[-6:-2]] + [sum(x,[]) for x in inputs[-2:]]
 
+        #node scores
         *lm_inputs, concept_ids, node_type_ids, node_scores, adj_lengths, edge_index, edge_type = _inputs
         edge_index, edge_type = self.batch_graph(edge_index, edge_type, concept_ids.size(1))
         adj = (edge_index.to(node_type_ids.device), edge_type.to(node_type_ids.device)) #edge_index: [2, total_E]   edge_type: [total_E, ]
 
         sent_vecs, all_hidden_states = self.encoder(*lm_inputs, layer_id=layer_id)
+        img_vecs = self.img_encoder(image)
+
         logits, attn = self.decoder(sent_vecs.to(node_type_ids.device),
+                                    img_vecs.to(node_type_ids.device),
                                     concept_ids,
                                     node_type_ids, node_scores, adj_lengths, adj,
                                     emb_data=None, cache_output=cache_output)
+
         logits = logits.view(bs, nc)
         if not detail:
             return logits, attn
@@ -272,10 +303,10 @@ class LM_QAGNN_DataLoader(object):
 
         model_type = MODEL_NAME_TO_CLASS[model_name]
         print ('train_statement_path', train_statement_path)
-        self.train_qids, self.train_labels, *self.train_encoder_data = load_input_tensors(train_statement_path, model_type, model_name, max_seq_length)
+        self.train_qids, self.train_labels,*self.train_encoder_data = load_input_tensors(train_statement_path, model_type, model_name, max_seq_length)
         self.dev_qids, self.dev_labels, *self.dev_encoder_data = load_input_tensors(dev_statement_path, model_type, model_name, max_seq_length)
 
-        num_choice = self.train_encoder_data[0].size(1)
+        num_choice = self.train_encoder_data[1].size(1)
         self.num_choice = num_choice
         print ('num_choice', num_choice)
         *self.train_decoder_data, self.train_adj_data = load_sparse_adj_data_with_contextnode(train_adj_path, max_node_num, num_choice, args)
